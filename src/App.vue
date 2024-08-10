@@ -1,26 +1,15 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js App"/>
+   <v-app>
+      <dispatch-root title="Union Management System" />
+   </v-app>
 </template>
 
-<script>
-import HelloWorld from './components/HelloWorld.vue'
+<script lang="ts">
+import DispatchRoot from "./DispatchRoot.vue";
+import { defineComponent, computed, ref, PropType } from 'vue';
+export default defineComponent({
+  components: { DispatchRoot },
+  name: 'App'
 
-export default {
-  name: 'App',
-  components: {
-    HelloWorld
-  }
-}
+}); 
 </script>
-
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
-</style>
