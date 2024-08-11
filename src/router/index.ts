@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import HomeView from '../page/HomeView.vue';
+import UserComponent from '@/page/UserComponent.vue';
 import AboutView from '../page/AboutView.vue';
 
 // Define tus rutas
@@ -7,7 +7,7 @@ const routes = [
   {
     path: '/',
     name: 'home',
-    component: HomeView,
+    component: UserComponent,
   },
   {
     path: '/about',

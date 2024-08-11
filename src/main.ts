@@ -1,18 +1,12 @@
-import { createApp } from 'vue';
-import App from './App.vue';
-import { createVuetify } from 'vuetify';
-import 'vuetify/styles'; // Importa los estilos globales de Vuetify
-import * as components from 'vuetify/components';
-import * as directives from 'vuetify/directives';
-import router from './router'; 
+import { createApp } from 'vue'
+import App from './App.vue'
+import router from './router'
+import vuetify from './plugins/vuetify'
+import { loadFonts } from './plugins/webfontloader'
 
-const vuetify = createVuetify({
-    components,
-    directives,
-  });
-
+loadFonts()
 
 createApp(App)
-  .use(vuetify)
   .use(router)
-  .mount('#app');
+  .use(vuetify)
+  .mount('#app')

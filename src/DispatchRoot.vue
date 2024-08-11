@@ -1,27 +1,29 @@
 <template>
-  <div id="dispatch-app">
-    <v-app-bar
-      absolute
-      height="88"
-      app
-      flat
-      color="transparent"
-    >
-      <v-toolbar-title>
-        <v-btn @click.stop="showSidebar = !showSidebar">
-          <v-icon>mdi-view-list</v-icon>
-          Menu
-        </v-btn>
-      </v-toolbar-title>
+  <v-app>
+    <!-- App Bar -->
+    <v-app-bar :elevation="2" rounded>
+      <template v-slot:prepend>
+        <v-app-bar-nav-icon @click="toggleDrawer"></v-app-bar-nav-icon>
+      </template>
+      <v-app-bar-title>Application Bar</v-app-bar-title>
       <v-spacer></v-spacer>
-      <component v-if="toolbarItems" :is="toolbarItems" />
     </v-app-bar>
-    <DispatchDrawer
-      :show="showSidebar"
-      :topDrawer="topDrawer"
-    />
-    <v-main class="d-flex grey lighten-3" style="min-height: 100vh">
-      <v-container fluid>
+
+    <!-- Navigation Drawer -->
+    <v-navigation-drawer v-model="drawer" app>
+      <v-list-item title="My Application" subtitle="Vuetify"></v-list-item>
+      <v-divider></v-divider>
+      <v-list-item>
+        <router-link :to="{ name: 'home' }">Home</router-link>
+      </v-list-item>
+      <v-list-item>
+        <router-link :to="{ name: 'about' }">About</router-link>
+      </v-list-item>
+    </v-navigation-drawer>
+
+    <!-- Main Content -->
+    <v-main>
+      <v-container fluid class="grey lighten-3" style="min-height: 100vh;">
         <router-view />
         <v-snackbar
           v-model="notification.state.show"
@@ -39,13 +41,15 @@
         </v-snackbar>
       </v-container>
     </v-main>
-  </div>
+  </v-app>
 </template>
 
 <script lang="ts">
 import notification from "./store/notification";
 import { defineComponent, computed, ref, PropType } from 'vue';
 import DispatchDrawer from "./DispatchDrawer.vue";
+import { client } from "./services/dispatch-client";
+
 interface NavigationRoute {
   title: string;
   icon?: string;
@@ -55,17 +59,6 @@ interface NavigationRoute {
 export default defineComponent({
   components: { DispatchDrawer },
   props: {
-    topDrawer: {
-      type: Object,
-      required: false,
-    },
-    toolbarItems: {
-      type: Object,
-      required: false,
-    },
-    token: {
-      type: String,
-    },
     dispatchUrl: {
       type: String,
       default: process.env.VUE_APP_API_URL || "http://localhost:5143/api",
@@ -76,12 +69,16 @@ export default defineComponent({
     },
   },
   created() {
+    client.init("http://localhost:5004/api", "test");
   },
-  watch: {
+  methods: {
+    toggleDrawer() {
+      this.drawer = !this.drawer;
+    }
   },
   data() {
     return {
-      isFullscreen: false,
+      drawer: false,
       sidebarColor: "secondary",
       groupActiveClass: "secondary lighten-1 white--text",
       itemActiveClass: "primary white--text",
@@ -102,9 +99,6 @@ export default defineComponent({
   },
   computed: {
 
-  },
-  methods: {
-  
   },
 });
 </script>

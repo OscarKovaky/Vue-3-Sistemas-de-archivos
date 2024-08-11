@@ -1,21 +1,25 @@
 <template>
-  <v-btn :text="text" v-on="$listeners" class="capitalize-text" v-bind="$attrs">
-    <slot>
-      {{ label }}
-    </slot>
+  <v-btn
+    :text="text"
+    v-bind="$attrs"
+    class="capitalize-text"
+    v-on="$listeners"
+  >
+    <slot>{{ label }}</slot>
   </v-btn>
 </template>
-<script lang="ts">
-import Vue from "vue";
 
-export default Vue.extend({
+<script lang="ts">
+import { defineComponent, PropType } from 'vue';
+
+export default defineComponent({
   props: {
     label: {
       type: String,
       default: "Close",
     },
     text: {
-      type: Boolean,
+      type: Boolean as PropType<boolean>,
       default: true,
     },
   },
@@ -28,3 +32,4 @@ export default Vue.extend({
   text-transform: capitalize;
 }
 </style>
+

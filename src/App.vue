@@ -1,15 +1,23 @@
 <template>
-   <v-app>
-      <dispatch-root title="Union Management System" />
-   </v-app>
+  <v-app>
+
+      <dispatch-root  title="Union Management System" />
+
+  </v-app>
 </template>
 
 <script lang="ts">
+import { defineComponent } from 'vue'
 import DispatchRoot from "./DispatchRoot.vue";
-import { defineComponent, computed, ref, PropType } from 'vue';
-export default defineComponent({
-  components: { DispatchRoot },
-  name: 'App'
 
-}); 
+export default defineComponent({
+  name: 'App',
+  components: { DispatchRoot },
+
+  data () {
+    return {
+      //
+    }
+  },
+})
 </script>

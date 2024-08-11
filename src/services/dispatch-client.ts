@@ -1,51 +1,46 @@
+// src/plugins/dispatchClient.ts
 
-import axios, { AxiosInstance, AxiosResponse } from "axios";
-import notification from "../store/notification";
-
-export interface ApiResponse<T> {
-  success: boolean;
-  status: number;
-  message: string;
-  response: T;
-}
-
-export interface FilesDto {
-  id?: string;
-  name: string;
-  type: string;
-  data: string;
-}
-
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import notification from '../store/notification';
+import { ApiResponse, FilesDto, RegisterUserDto, TreeNodeDto, UserDto } from './types';
 
 export default class DispatchClient {
-  private client!: AxiosInstance;
+  
+  private client: AxiosInstance;
 
+  constructor(baseUrl: string, token: string) {
+    this.client = axios.create({
+      baseURL: baseUrl,
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
 
-  constructor(baseUrl: string, token: string, unionId: string) {
-    this.init(baseUrl, token, unionId);
+      validateStatus: () => true,
+    });
   }
 
-  public init(baseUrl: string, token: string, unionId: string) {
+  public init(baseUrl: string, token: string) {
     this.client = axios.create({
       baseURL: baseUrl,
       headers: {
         Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-        "X-Union-Id": unionId,
+        Authorization: `Bearer ${token}`
+   
       },
       validateStatus: () => true,
     });
   }
 
-  private async handleResponse<T>(
-    promise: Promise<AxiosResponse<T>>
-  ): Promise<ApiResponse<T>> {
+
+
+  private async handleResponse<T>(promise: Promise<AxiosResponse<T>>): Promise<ApiResponse<T>> {
     try {
       const resp = await promise;
       return this.toApiResponse(resp);
     } catch (error) {
-      notification.show((error as any), "error");
-      console.error("Error:", error);
+      notification.show((error as any).message || 'Unknown error', 'error');
+      console.error('Error:', error);
       throw error;
     }
   }
@@ -54,8 +49,7 @@ export default class DispatchClient {
     if (resp.status >= 500) {
       throw new Error(resp.statusText);
     } else if (resp.status >= 400) {
-      let msg: string =
-        (resp.data as any)?.message || resp.data || resp.statusText;
+      const msg = (resp.data as any)?.message || resp.data || resp.statusText;
       throw new Error(msg);
     }
 
@@ -83,23 +77,20 @@ export default class DispatchClient {
     return this.handleResponse(
       this.client.post<T>(url, data, {
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
       })
     );
   }
 
-  public async updateFile(
-    file: File,
-    id: string
-  ): Promise<ApiResponse<FilesDto>> {
+  public async updateFile(file: File, id: string): Promise<ApiResponse<FilesDto>> {
     const fd = new FormData();
-    fd.append("file", file, file.name);
+    fd.append('file', file, file.name);
 
     return this.handleResponse(
       this.client.put(`File/${id}`, fd, {
         headers: {
-          "Content-Type": "multipart/form-data",
+          'Content-Type': 'multipart/form-data',
         },
       })
     );
@@ -107,12 +98,12 @@ export default class DispatchClient {
 
   public async uploadFile(file: File): Promise<ApiResponse<FilesDto>> {
     const fd = new FormData();
-    fd.append("file", file, file.name);
+    fd.append('file', file, file.name);
 
     return this.handleResponse(
-      this.client.post("File", fd, {
+      this.client.post('File', fd, {
         headers: {
-          "Content-Type": "multipart/form-data",
+          'Content-Type': 'multipart/form-data',
         },
       })
     );
@@ -120,9 +111,9 @@ export default class DispatchClient {
 
   public async postFile<T>(url: string, data: any): Promise<ApiResponse<T>> {
     return this.handleResponse(
-      this.client.post(url, data, {
+      this.client.post<T>(url, data, {
         headers: {
-          "Content-Type": "multipart/form-data",
+          'Content-Type': 'multipart/form-data',
         },
       })
     );
@@ -130,19 +121,30 @@ export default class DispatchClient {
 
   public async putFile<T>(url: string, data: any): Promise<ApiResponse<T>> {
     return this.handleResponse(
-      this.client.put(url, data, {
+      this.client.put<T>(url, data, {
         headers: {
-          "Content-Type": "multipart/form-data",
+          'Content-Type': 'multipart/form-data',
         },
       })
     );
+  }
+
+  public async getFile(url: string): Promise<Blob> {
+    const response = await this.client.get(url, {
+      headers: {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      },
+      responseType: 'blob', // Asegúrate de manejar la respuesta como blob
+    });
+  
+    return response.data; // Devuelve el archivo como un Blob
   }
 
   public async put<T>(url: string, data: any): Promise<ApiResponse<T>> {
     return this.handleResponse(
       this.client.put<T>(url, data, {
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
       })
     );
@@ -152,11 +154,47 @@ export default class DispatchClient {
     return this.handleResponse(
       this.client.patch<T>(url, data, {
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
       })
     );
   }
+  public async getUsers() {
+    return await this.get<UserDto[]>("Auth");
+  }
+
+  public async addUser(country: RegisterUserDto) {
+    return await this.post<RegisterUserDto>("Auth/register", country);
+  }
+
+  public async updateUser(country: UserDto) {
+    return await this.put<UserDto>("Auth", country);
+  }
+
+  public async deleteUser(id: number) {
+    return await this.delete<UserDto>(`Auth/${id}`);
+  }
+
+  public async getUserNodes(userId: number) {
+    return await this.get<TreeNodeDto[]>(`Tree/${userId}`);
+  }
+
+  public async createNode(node: TreeNodeDto) {
+    return await this.post<number>('Tree', node);
+  }
+
+  public async deleteNode(id: number) {
+    return await this.delete<void>(`Tree/single/${id}`);
+  }
+
+  public async deleteNodeWithChildren(id: number) {
+    return await this.delete<void>(`Tree/cascade/${id}`);
+  }
+
+
+
 }
 
-export const client = new DispatchClient("", "", "");
+
+
+export const client = new DispatchClient("", "");

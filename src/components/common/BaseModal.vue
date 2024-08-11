@@ -21,7 +21,11 @@
             <v-spacer></v-spacer>
             <CloseButton @click="close" />
 
-        
+            <SubmitAction
+              v-if="$listeners['submit']"
+              :loading="loading"
+              :formId="title"
+            />
           </slot>
         </v-card-actions>
       </v-form>
@@ -29,16 +33,16 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed, ref, PropType } from 'vue';
-import CloseButton from "./CloseButton.vue";
-import SubmitAction from "./SubmitAction.vue";
-import BaseToolbar from "./BaseToolbar.vue";
+ import { defineComponent,  PropType }  from 'vue';
+import SubmitAction from "../common/SubmitAction.vue";
+import CloseButton from "../common/CloseButton.vue";
+
+type ModalSize = "sm" | "md" | "lg";
 
 export default defineComponent({
   components: {
     CloseButton,
     SubmitAction,
-    BaseToolbar,
   },
   props: {
     fullscreen: {
@@ -53,7 +57,7 @@ export default defineComponent({
       required: true,
     },
     size: {
-      type: String ,
+      type: String as PropType<ModalSize>,
       default: "md",
     },
     loading: {

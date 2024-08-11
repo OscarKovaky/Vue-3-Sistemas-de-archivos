@@ -1,10 +1,6 @@
 <template>
   <v-dialog :value="show" @input="cancel" persistent max-width="400" scrollable>
-    <MaterialCard
-      icon="mdi-delete"
-      :title="title"
-      :color="$vuetify.theme.currentTheme.error"
-    >
+
       <v-card-text>
         {{ text }}
       </v-card-text>
@@ -19,19 +15,17 @@
           >Delete</v-btn
         >
       </v-card-actions>
-    </MaterialCard>
   </v-dialog>
 </template>
 
 <script lang="ts">
-import Vue from "vue";
-import CloseButton from "@/components/common/CloseButton.vue";
-import ActionCard from "@/components/common/ActionCard.vue";
-import components from "pbas-vue-components";
+import { defineComponent } from 'vue';
+import CloseButton from "./CloseButton.vue";
+import ActionCard from "./ActionCard.vue";
 
-export default Vue.extend({
+
+export default defineComponent({
   components: {
-    MaterialCard: components.MaterialCard,
     CloseButton,
     ActionCard,
   },
