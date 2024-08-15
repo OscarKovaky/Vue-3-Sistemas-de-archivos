@@ -1,6 +1,6 @@
 // src/plugins/dispatchClient.ts
 
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 import notification from '../store/notification';
 import { ApiResponse, FilesDto, RegisterUserDto, TreeNodeDto, UserDto } from './types';
 
@@ -15,32 +15,65 @@ export default class DispatchClient {
         Accept: 'application/json',
         Authorization: `Bearer ${token}`,
       },
-
       validateStatus: () => true,
     });
+
+        // Configurar interceptores
+        this.client.interceptors.response.use(
+          this.handleSuccess,
+          this.handleError
+        );
   }
 
-  public init(baseUrl: string, token: string) {
+  public init(baseUrl: string, apiKey: string) {
     this.client = axios.create({
       baseURL: baseUrl,
       headers: {
         Accept: "application/json",
-        Authorization: `Bearer ${token}`
-   
+        'X-Api-Key': apiKey,
       },
       validateStatus: () => true,
     });
+
+    // Configurar interceptores
+    this.client.interceptors.response.use(
+      this.handleSuccess,
+      this.handleError
+    );
   }
 
 
+  private handleSuccess<T>(response: AxiosResponse<T>): AxiosResponse<T> {
+    return response;
+  }
+
+  private async handleError(error: AxiosError): Promise<any> {
+    const { response } = error;
+
+    if (response) {
+        const problemDetails = response.data as any;
+
+        // Mostrar el detalle del problema en lugar del objeto completo
+        const errorMessage = problemDetails.detail || problemDetails.title || 'An error occurred';
+
+        notification.show(errorMessage, 'error');
+
+        // Loguear un mensaje de error más detallado
+        console.error('Error Details:', JSON.stringify(problemDetails, null, 2));
+    } else {
+        // Manejar errores que no tienen respuesta (por ejemplo, problemas de red)
+        notification.show(error.message || 'Network error', 'error');
+        console.error('Network Error:', error.message);
+    }
+
+    return Promise.reject(error);
+  }
 
   private async handleResponse<T>(promise: Promise<AxiosResponse<T>>): Promise<ApiResponse<T>> {
     try {
       const resp = await promise;
       return this.toApiResponse(resp);
     } catch (error) {
-      notification.show((error as any).message || 'Unknown error', 'error');
-      console.error('Error:', error);
       throw error;
     }
   }
@@ -49,17 +82,17 @@ export default class DispatchClient {
     if (resp.status >= 500) {
       throw new Error(resp.statusText);
     } else if (resp.status >= 400) {
-      const msg = (resp.data as any)?.message || resp.data || resp.statusText;
-      throw new Error(msg);
+        const msg = (resp.data as any)?.message || JSON.stringify(resp.data) || resp.statusText;
+        throw new Error(msg);
     }
 
     return {
-      status: resp.status,
-      message: resp.statusText,
-      response: resp.data,
-      success: resp.status < 400,
+        status: resp.status,
+        message: resp.statusText,
+        response: resp.data,
+        success: resp.status < 400,
     };
-  }
+    }
 
   public async getDataURL(fileId: string): Promise<ApiResponse<string>> {
     return this.get<string>(`File/${fileId}/dataurl`);
@@ -163,12 +196,12 @@ export default class DispatchClient {
     return await this.get<UserDto[]>("Auth");
   }
 
-  public async addUser(country: RegisterUserDto) {
-    return await this.post<RegisterUserDto>("Auth/register", country);
+  public async addUser(user: RegisterUserDto) {
+    return await this.post<RegisterUserDto>("Auth/register", user);
   }
 
-  public async updateUser(country: UserDto) {
-    return await this.put<UserDto>("Auth", country);
+  public async updateUser(user: UserDto) {
+    return await this.put<UserDto>("Auth/update-username", user);
   }
 
   public async deleteUser(id: number) {

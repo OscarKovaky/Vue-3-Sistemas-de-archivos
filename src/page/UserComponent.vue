@@ -51,39 +51,93 @@
 
 
       <!-- Modal para Crear Usuario -->
-  <v-dialog v-model="modals.create" max-width="500px">
+  <v-dialog v-model="modals.create" max-width="600px">
     <v-card>
       <v-card-title>Create User</v-card-title>
-      <v-card-subtitle>
-        <v-text-field v-model="newUser.username" label="Username"></v-text-field>
-      </v-card-subtitle>
-      <v-card-subtitle>
-        <v-text-field v-model="newUser.email" label="Email"></v-text-field>
-      </v-card-subtitle>
-      <v-card-subtitle>
-        <v-text-field v-model="newUser.role" label="Role"></v-text-field>
-      </v-card-subtitle>
-      <v-card-subtitle>
-        <v-text-field v-model="newUser.password" label="Password"></v-text-field>
-      </v-card-subtitle>
+      <v-form ref="createForm" v-model="isFormValid">
+           <v-container>
+          <v-row>
+            <!-- Username Field -->
+            <v-col cols="12" md="6">
+              <v-text-field
+                v-model="newUser.username"
+                label="Username"
+                :rules="[rules.required, value => rules.minLength(value, 3), value => rules.maxLength(value, 20)]"
+                required
+                clearable
+                outlined
+                @input="checkFormValidCreate"
+              ></v-text-field>
+            </v-col>
+
+            <!-- Email Field -->
+            <v-col cols="12" md="6">
+              <v-text-field
+                v-model="newUser.email"
+                label="Email"
+                :rules="[rules.required, rules.email]"
+                required
+                clearable
+                outlined
+                @input="checkFormValidCreate"
+              ></v-text-field>
+            </v-col>
+
+            <!-- Role Field -->
+            <v-col cols="12" md="6">
+              <v-text-field
+                v-model="newUser.role"
+                label="Role"
+                :rules="[rules.required,rules.onlyLetters, value => rules.maxLength(value, 20)]"
+                required
+                clearable
+                outlined
+              ></v-text-field>
+            </v-col>
+
+            <!-- Password Field -->
+            <v-col cols="12" md="6">
+              <v-text-field
+                v-model="newUser.password"
+                label="Password"
+                :rules="[rules.required, rules.passwordComplexity]"
+                required
+                clearable
+                outlined
+                @input="checkFormValidCreate"
+              ></v-text-field>
+            </v-col>
+          </v-row>
+        </v-container>
+      </v-form>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn @click="createUser" color="primary">Create</v-btn>
+        <v-btn @click="createUser"  :disabled="!isFormValid">Create</v-btn>
         <v-btn @click="modals.create = false">Cancel</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
 
   <!-- Modal para Actualizar Usuario -->
-  <v-dialog v-model="modals.update" max-width="500px">
+  <v-dialog v-model="modals.update" max-width="600px">
     <v-card>
       <v-card-title>Update User</v-card-title>
-      <v-card-subtitle v-if="selected">
-        <v-text-field v-model="selected.username" label="Username"></v-text-field>
-      </v-card-subtitle>
+      <v-form ref="updateForm" v-model="isFormValid">
+        <v-card-subtitle v-if="selectedUser">
+          <v-text-field
+          v-model="selectedUser.username"
+          label="Username"
+          :rules="[rules.required, value => rules.minLength(value, 3), value => rules.maxLength(value, 20)]"
+          required
+          clearable
+          outlined
+          @input="checkFormValidUpdate"
+          ></v-text-field>
+        </v-card-subtitle>
+      </v-form> 
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn @click="updateUser" color="primary">Update</v-btn>
+        <v-btn @click="updateUser"  :disabled="!isFormValid">Update</v-btn>
         <v-btn @click="modals.update = false">Cancel</v-btn>
       </v-card-actions>
     </v-card>
@@ -93,7 +147,7 @@
   <v-dialog v-model="modals.delete" max-width="500px">
     <v-card>
       <v-card-title>Delete User</v-card-title>
-      <v-card-subtitle>Are you sure you want to delete {{ selected?.username }}?</v-card-subtitle>
+      <v-card-subtitle>Are you sure you want to delete {{ selectedUser?.username }}?</v-card-subtitle>
       <v-card-actions>
         <v-spacer></v-spacer>
         <v-btn @click="confirmDelete" color="error">Delete</v-btn>
@@ -105,10 +159,10 @@
    <!-- Modal para Documentos -->
    <v-dialog v-model="modals.documents" max-width="800px">
       <v-card>
-        <v-card-title>Documents for {{ selected?.username }}</v-card-title>
-        <v-card-subtitle v-if="selected">
+        <v-card-title>Documents for {{ selectedUser?.username }}</v-card-title>
+        <v-card-subtitle v-if="selectedUser">
           <!-- Including the treeview component -->
-          <TreeView :userId="selected.id ?? 0" :username="selected.username" />
+          <TreeView :userId="selectedUser.id ?? 0" :username="selectedUser.username" />
 
         </v-card-subtitle>
         <v-card-actions>
@@ -133,7 +187,7 @@ import AddButton from "../components/common/AddButton.vue";
 import { RegisterUserDto, UserDto, VForm } from "../services/types";
 import { client } from "../services/dispatch-client";
 import TreeView from '@/views/TreeView.vue';
-
+import { useUserStore } from '../store/userStore';
 
 export default defineComponent({
   name: "UserComponent",
@@ -153,8 +207,6 @@ export default defineComponent({
         documents: false,
       },
       loading: false,
-      selected: null as UserDto | null,
-      users: [] as UserDto[],
       newUser: {} as RegisterUserDto,
       headersUsers: [
         { text: 'Username', value: 'username' },
@@ -162,44 +214,87 @@ export default defineComponent({
         { text: 'Role', value: 'role' },
         { text: 'Actions', value: 'actions' },
       ],
+      isFormValid: false,
+      rules: {
+        required: (value: string) => !!value || 'Este campo es obligatorio.',
+        email: (value: string) => {
+          const pattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+          return pattern.test(value) || 'Ingrese un correo electrónico válido con un dominio válido.';
+        },
+        minLength: (value: string, length: number) => value.length >= length || `Debe tener al menos ${length} caracteres.`,
+        maxLength: (value: string, length: number) => value.length <= length || `Debe tener un máximo de ${length} caracteres.`,
+        onlyLetters: (value: string) => {
+          const pattern = /^[a-zA-Z]+$/;
+          return pattern.test(value) || 'El rol solo debe contener letras.';
+        },
+        passwordComplexity: (value: string) => {
+          const pattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
+          return pattern.test(value) || 'La contraseña debe tener al menos 8 caracteres, incluyendo un número, una letra y un carácter especial.';
+        },
+      }
     };
   },
+  computed: {
+    users() {
+      const userStore = useUserStore();
+      return userStore.users;
+    },
+    selectedUser() {
+      const userStore = useUserStore();
+      return userStore.selectedUser;
+    }
+  },
   methods: {
+    checkFormValidCreate() {
+      const form = this.$refs.createForm as VForm;
+      this.isFormValid = form.validate();
+    },
+    checkFormValidUpdate() {
+      const form = this.$refs.updateForm as VForm;
+      this.isFormValid = form.validate();
+    },
     async getUsers() {
-      const res = await client.getUsers();
-      this.users = res.response;
+      const userStore = useUserStore();
+       await userStore.fetchUsers();
     },
     async createUser() {
-      await client.addUser(this.newUser);
-      await this.getUsers();
-      this.modals.create = false;
+      if (this.isFormValid) {
+        const userStore = useUserStore();
+        await userStore.createUser(this.newUser);
+        this.modals.create = false;
+      }
     },
     async confirmDelete() {
-      if (this.selected?.id) {
-        await client.deleteUser(this.selected.id);
-        await this.getUsers();
+      const userStore = useUserStore();
+      if (userStore.selectedUser?.id) {
+        await userStore.deleteUser(userStore.selectedUser.id);
         this.modals.delete = false;
       }
     },
-    async updateUser(user: UserDto) {
-      await client.updateUser(user);
-      await this.getUsers();
-      this.modals.update = false;
+    async updateUser() {
+      if (this.isFormValid) {
+        const userStore = useUserStore();
+        await userStore.updateUser(userStore.selectedUser!);
+        this.modals.update = false;
+      }
     },
     openCreateModal() {
       this.newUser = {} as RegisterUserDto; // Reset newUser before opening the modal
       this.modals.create = true;
     },
     openDeleteModal(user: UserDto) {
-      this.selected = user;
+      const userStore = useUserStore();
+      userStore.selectUser(user);
       this.modals.delete = true;
     },
     openUpdateModal(user: UserDto) {
-      this.selected = user;
+      const userStore = useUserStore();
+      userStore.selectUser(user);
       this.modals.update = true;
     },
     openDocumentsModal(user: UserDto) {
-      this.selected = user;
+      const userStore = useUserStore();
+      userStore.selectUser(user);
       this.modals.documents = true;
     },
     async downloadExcelFile() {
@@ -225,3 +320,8 @@ export default defineComponent({
   },
 });
 </script>
+<style scoped>
+.password-field {
+  max-width: 100%;
+}
+</style>

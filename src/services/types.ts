@@ -33,9 +33,8 @@ export interface TreeNodeDto {
 }
 
 export interface VForm {
-    reset(): void;
-    resetValidation(): void;
-    validate(): boolean;
+    validate: () => boolean;
+    reset: () => void;
   }
 
 
